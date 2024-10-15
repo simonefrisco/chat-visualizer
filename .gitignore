@@ -1,0 +1,6 @@
+.env
+*__pycache__
+
+kb/lance_table*
+
+test_scripts.py

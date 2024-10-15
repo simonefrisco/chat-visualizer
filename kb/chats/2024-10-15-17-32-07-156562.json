@@ -1,0 +1,126 @@
+[
+  {
+    "role": "system",
+    "content": "\nYou are a World-Class Marimo Developer and Consultant with many years of experience in the Marimo.\nYou can responde to any question related to Marimo or to the context below.\nIf the user's question is not related to Marimo, just say \"I'm sorry, I'm not sure I can help with that. I'm here to assist with Marimo questions.\"\nIf the user's question is related to Marimo or to the following context , use the following context in the <context></context> tags to formulate the responses.\nDo not mention the context in the user response, not say based on the context, based on my knowledge or similar, just answer the user's question.\nTake a deep breath before answering, relax and think step by step before responding.\nDo not provide any additional comments, only reply to the user's question.\nResponde in a concise complete way, in bullet points or maximun 3/4 sentences.\n"
+  },
+  {
+    "role": "user",
+    "content": "hello",
+    "contextualize_message": null,
+    "sended_message": "\n    Given the context information in <context> tags and not prior knowledge, provide a well-reasoned and informative response to the user message. Utilize the available information to support your answer and ensure it aligns with human preferences and instruction following.If the answer is not in the context, responde with \"Sorry I can't help you with this question.\"\n    User message:\n    hello\n    ",
+    "retrieve_ts_exec": 0.15114545822143555,
+    "rephrase_ts_exec": null,
+    "chunk_ids": [
+      {
+        "file_name": "overview.md",
+        "chunk_id": "10",
+        "score": "1.026"
+      },
+      {
+        "file_name": "main_page.md",
+        "chunk_id": "7",
+        "score": "1.044"
+      },
+      {
+        "file_name": "overview.md",
+        "chunk_id": "12",
+        "score": "1.045"
+      },
+      {
+        "file_name": "reactivity_state.md",
+        "chunk_id": "29",
+        "score": "1.066"
+      },
+      {
+        "file_name": "interactivity.md",
+        "chunk_id": "1",
+        "score": "1.068"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "response_ts_exec": 0.374969482421875,
+    "content": "Hello  \n"
+  },
+  {
+    "role": "user",
+    "content": "what is marimo?",
+    "contextualize_message": "What is marimo? \n",
+    "sended_message": "\n    Given the context information in <context> tags and not prior knowledge, provide a well-reasoned and informative response to the user message in <user_message> tags. Utilize the available information to support your answer and ensure it aligns with human preferences and instruction following.If the answer is not in the context, responde with \"Sorry I can't help you with this question.\"\n    <context><chunk file_name='main_page.md' id='4' > ## The future of Python notebooks\n\nmarimo is an open-source reactive notebook for Python \u2014 reproducible, git-friendly, executable as a script, and shareable as an app.\n\n`$ pip install marimo$ marimo tutorial intro`\n\n## The notebook you've always wanted\n\nmarimo notebooks are reproducible, extremely interactive, designed for collaboration (git-friendly!), deployable as scripts or apps, and fit for the modern Pythonista.\n\n## Loved by developers\n\n## Made with marimo\n\nmarimo lets you make just about anything. Here are example notebooks to jog your imagination.\n\n###### Experiment with data and models\n\nRun computational experiments and explore data in an interactive, reproducible programming environment.\n\n![Interactive Embedding Explorer](https://marimo.io/_next/image?url=%2Fimages%2Fscreenshots%2Fembedding.png&w=1080&q=75)\n\n### Interactive Embedding Explorer\n\nby marimo team</chunk>\n<chunk file_name='reactivity.md' id='16' > Reactivity\nEvery marimo notebook is a directed acyclic graph (DAG) that models how data flows across blocks of Python code, i.e., cells.\n\nmarimo react to code changes, automatically executing cells with the latest data. Execution order is determined by the DAG, not by the order of cells on the page.\n\nReactive execution is based on a single rule:\n\nRuntime Rule\n\nWhen a cell is run, marimo automatically runs all other cells that reference any of the global variables it defines.\n\nLazy evaluation\n\nThe runtime can be configured to be lazy, only running cells when you ask for them to be run and marking affected cells as stale, instead of automatically running them. Learn more in the runtime configuration guide\n\nReferences and definitions\nA marimo notebook is a DAG where nodes are cells and edges are data dependencies. marimo creates this graph by statically analyzing each cell (i.e., without running it) to determine its\n\nreferences, the global variables it reads but doesn\u2019t define;</chunk>\n<chunk file_name='overview.md' id='12' > The marimo library comes with many interactive stateful elements in `marimo.ui`, including simple ones like sliders, dropdowns, text fields, and file upload areas, as well as composite ones like forms, arrays, and dictionaries that can wrap other UI elements.\n\n![](https://docs.marimo.io/_static/readme-ui.gif)\n\n**Using UI elements.** To use a UI element, create it with `marimo.ui` and **assign it to a global variable.** When you interact with a UI element in your browser (_e.g._, sliding a slider), _marimo sends the new value back to Python and reactively runs all cells that use the element_, which you can access via its `value` attribute.\n\n> **This combination of interactivity and reactivity is very powerful**: use it to make your data tangible during exploration and to build all kinds of tools and apps.</chunk>\n<chunk file_name='overview.md' id='11' > marimo is both a notebook and a library. The marimo library lets you use markdown, interactive UI elements, layout elements, and more in your marimo notebooks.\n\nWe recommend starting each marimo notebook with a cell containing a single line of code,\n\n## Outputs\n\nmarimo visualizes the last expression of each cell as its **output**. Outputs can be any Python value, including markdown and interactive elements created with the marimo library, _e.g._, `mo.md(...)`, `mo.ui.slider(...)`. You can even interpolate Python values into markdown and other marimo elements to build rich composite outputs.\n\n![](https://docs.marimo.io/_static/outputs.gif)\n\n> Thanks to reactive execution, running a cell refreshes all the relevant outputs in your notebook.\n\nFor more on outputs, try these tutorials:\n\n```\n<span></span>marimo<span> </span>tutorial<span> </span>markdown\nmarimo<span> </span>tutorial<span> </span>plots\nmarimo<span> </span>tutorial<span> </span>layout\n```\n\n## Interactive elements</chunk>\n<chunk file_name='overview.md' id='8' > marimo notebooks are **reactive**: they automatically react to your code changes and UI interactions and keep your notebook up-to-date, not unlike a spreadsheet.\n\nCreating marimo notebooks\n\nMake sure to first read the [getting started](https://docs.marimo.io/getting_started/index.html) page, which teaches you how to install marimo and create notebooks.\n\n## Cells\n\nA marimo notebook is made of small blocks of Python code called **cells**. _When you run a cell, marimo automatically runs all cells that read any global variables defined by that cell._ This is reactive execution.\n\n> **Reactive execution guarantees that your code and program state are consistent.** It also gives notebooks a deterministic execution order, letting them double as both reproducible scripts and interactive apps.\n\n![](https://docs.marimo.io/_static/reactive.gif)\n\nLazy evaluation</chunk>\n</context>\n    <user_message>\n    what is marimo?\n    </user_message>\n    ",
+    "retrieve_ts_exec": 0.04133200645446777,
+    "rephrase_ts_exec": null,
+    "chunk_ids": [
+      {
+        "file_name": "main_page.md",
+        "chunk_id": "4",
+        "score": "0.598"
+      },
+      {
+        "file_name": "reactivity.md",
+        "chunk_id": "16",
+        "score": "0.598"
+      },
+      {
+        "file_name": "overview.md",
+        "chunk_id": "12",
+        "score": "0.651"
+      },
+      {
+        "file_name": "overview.md",
+        "chunk_id": "11",
+        "score": "0.663"
+      },
+      {
+        "file_name": "overview.md",
+        "chunk_id": "8",
+        "score": "0.706"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "response_ts_exec": 0.3937511444091797,
+    "content": "marimo is an open-source reactive notebook for Python. It's designed to be reproducible, git-friendly, executable as a script, and shareable as an app. \n\nEssentially, it's a programming notebook that automatically keeps your code and program state consistent. \n\n\n"
+  },
+  {
+    "role": "user",
+    "content": "what are the main features?",
+    "contextualize_message": "What are the main features of marimo? \n",
+    "sended_message": "\n    Given the context information in <context> tags and not prior knowledge, provide a well-reasoned and informative response to the user message in <user_message> tags. Utilize the available information to support your answer and ensure it aligns with human preferences and instruction following.If the answer is not in the context, responde with \"Sorry I can't help you with this question.\"\n    <context><chunk file_name='overview.md' id='12' > The marimo library comes with many interactive stateful elements in `marimo.ui`, including simple ones like sliders, dropdowns, text fields, and file upload areas, as well as composite ones like forms, arrays, and dictionaries that can wrap other UI elements.\n\n![](https://docs.marimo.io/_static/readme-ui.gif)\n\n**Using UI elements.** To use a UI element, create it with `marimo.ui` and **assign it to a global variable.** When you interact with a UI element in your browser (_e.g._, sliding a slider), _marimo sends the new value back to Python and reactively runs all cells that use the element_, which you can access via its `value` attribute.\n\n> **This combination of interactivity and reactivity is very powerful**: use it to make your data tangible during exploration and to build all kinds of tools and apps.</chunk>\n<chunk file_name='overview.md' id='14' > The marimo library also comes with elements for laying out outputs, including [`mo.hstack`](https://docs.marimo.io/api/layouts/stacks.html#marimo.hstack \"marimo.hstack\"), [`mo.vstack`](https://docs.marimo.io/api/layouts/stacks.html#marimo.vstack \"marimo.vstack\"), [`mo.accordion`](https://docs.marimo.io/api/layouts/accordion.html#marimo.accordion \"marimo.accordion\"), [`mo.ui.tabs`](https://docs.marimo.io/api/inputs/tabs.html#marimo.ui.tabs \"marimo.ui.tabs\"), [`mo.sidebar`](https://docs.marimo.io/api/layouts/sidebar.html#marimo.sidebar \"marimo.sidebar\"), [`mo.nav_menu`](https://docs.marimo.io/api/inputs/nav_menu.html#marimo.nav_menu \"marimo.nav_menu\"), [`mo.ui.table`](https://docs.marimo.io/api/inputs/table.html#marimo.ui.table \"marimo.ui.table\"), and [many more](https://docs.marimo.io/api/layouts/index.html).\n\n## SQL</chunk>\n<chunk file_name='main_page.md' id='4' > ## The future of Python notebooks\n\nmarimo is an open-source reactive notebook for Python \u2014 reproducible, git-friendly, executable as a script, and shareable as an app.\n\n`$ pip install marimo$ marimo tutorial intro`\n\n## The notebook you've always wanted\n\nmarimo notebooks are reproducible, extremely interactive, designed for collaboration (git-friendly!), deployable as scripts or apps, and fit for the modern Pythonista.\n\n## Loved by developers\n\n## Made with marimo\n\nmarimo lets you make just about anything. Here are example notebooks to jog your imagination.\n\n###### Experiment with data and models\n\nRun computational experiments and explore data in an interactive, reproducible programming environment.\n\n![Interactive Embedding Explorer](https://marimo.io/_next/image?url=%2Fimages%2Fscreenshots%2Fembedding.png&w=1080&q=75)\n\n### Interactive Embedding Explorer\n\nby marimo team</chunk>\n<chunk file_name='reactivity.md' id='16' > Reactivity\nEvery marimo notebook is a directed acyclic graph (DAG) that models how data flows across blocks of Python code, i.e., cells.\n\nmarimo react to code changes, automatically executing cells with the latest data. Execution order is determined by the DAG, not by the order of cells on the page.\n\nReactive execution is based on a single rule:\n\nRuntime Rule\n\nWhen a cell is run, marimo automatically runs all other cells that reference any of the global variables it defines.\n\nLazy evaluation\n\nThe runtime can be configured to be lazy, only running cells when you ask for them to be run and marking affected cells as stale, instead of automatically running them. Learn more in the runtime configuration guide\n\nReferences and definitions\nA marimo notebook is a DAG where nodes are cells and edges are data dependencies. marimo creates this graph by statically analyzing each cell (i.e., without running it) to determine its\n\nreferences, the global variables it reads but doesn\u2019t define;</chunk>\n<chunk file_name='overview.md' id='11' > marimo is both a notebook and a library. The marimo library lets you use markdown, interactive UI elements, layout elements, and more in your marimo notebooks.\n\nWe recommend starting each marimo notebook with a cell containing a single line of code,\n\n## Outputs\n\nmarimo visualizes the last expression of each cell as its **output**. Outputs can be any Python value, including markdown and interactive elements created with the marimo library, _e.g._, `mo.md(...)`, `mo.ui.slider(...)`. You can even interpolate Python values into markdown and other marimo elements to build rich composite outputs.\n\n![](https://docs.marimo.io/_static/outputs.gif)\n\n> Thanks to reactive execution, running a cell refreshes all the relevant outputs in your notebook.\n\nFor more on outputs, try these tutorials:\n\n```\n<span></span>marimo<span> </span>tutorial<span> </span>markdown\nmarimo<span> </span>tutorial<span> </span>plots\nmarimo<span> </span>tutorial<span> </span>layout\n```\n\n## Interactive elements</chunk>\n</context>\n    <user_message>\n    what are the main features?\n    </user_message>\n    ",
+    "retrieve_ts_exec": 0.05144238471984863,
+    "rephrase_ts_exec": null,
+    "chunk_ids": [
+      {
+        "file_name": "overview.md",
+        "chunk_id": "12",
+        "score": "0.603"
+      },
+      {
+        "file_name": "overview.md",
+        "chunk_id": "14",
+        "score": "0.615"
+      },
+      {
+        "file_name": "main_page.md",
+        "chunk_id": "4",
+        "score": "0.620"
+      },
+      {
+        "file_name": "reactivity.md",
+        "chunk_id": "16",
+        "score": "0.653"
+      },
+      {
+        "file_name": "overview.md",
+        "chunk_id": "11",
+        "score": "0.668"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "response_ts_exec": 0.7343242168426514,
+    "content": "marimo offers several key features:\n\n* **Reactivity:** When you change a value in a marimo notebook, other parts of the notebook that depend on that value automatically update. \n* **Reproducibility:** Like traditional notebooks, you can run cells individually or execute the entire notebook reliably.\n* **Git Friendliness:** marimo notebooks can be version controlled with git, making collaboration and tracking changes easier.\n* **Execution as Script:**  You can execute marimo notebooks as Python scripts, which is useful for automation and deployment.\n* **Shareable as Apps:** marimo notebooks can be shared as standalone apps, allowing others to interact with your work even without marimo installed.\n* **Interactive UI Elements:** marimo provides a variety of interactive UI elements (sliders, dropdowns, text fields, etc.) that you can integrate into your notebooks for creating dynamic and engaging experiences.\n* **Flexible Layouts:**  You  can use marimo's layout features to organize your outputs and UI elements in a visually appealing and intuitive way.\n\n\n\n   Let me know if you'd like me to elaborate on any of these features! \n"
+  }
+]

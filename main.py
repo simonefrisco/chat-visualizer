@@ -6,6 +6,8 @@ app = marimo.App(width="full", layout_file="layouts/main.grid.json")
 
 @app.cell
 def __(Path, os):
+    #* PARAMS
+
     from datetime import datetime
     LANCE_PATH = os.environ['LANCE_PATH']
     TABLE_NAME      = os.environ['TABLE_NAME']
@@ -28,34 +30,206 @@ def __(Path, os):
 
 
 @app.cell
-def __(SESSION_ID):
-    SESSION_ID
+def __(
+    CHATS_PATH,
+    Path,
+    SESSION_ID,
+    TABLE_NAME,
+    add_doc_to_lance_table,
+    get_docs,
+    json,
+    mo,
+    token_count,
+):
+    #* STATES
+    def init_table():
+        for i in Path('kb\marimo_docs').glob('*.md'):
+            with open(i, 'r', encoding='utf-8') as file:
+                content = file.read()
+            add_doc_to_lance_table(str(i).split('\\')[-1] , content)
+
+    def submit_handler(x):
+        print('loading doc in lance table...')
+        add_doc_to_lance_table(x['doc_name'], x['doc_text'])
+        print('Done')
+        set_docs_df(fetch_chunks_table())
+
+    def fetch_chunks_table(with_content=False):
+        doc_table = get_docs(TABLE_NAME).drop('vector',axis=1).rename(columns={'text':'content','file_name':'doc_name','id':'chunk_id'}).assign(
+                 end_token_index=lambda x:x['start_token_index']+x['content'].apply(token_count)
+             )
+        docs_df = doc_table.groupby('doc_name')['content'].sum().reset_index().assign(doc_token_count=lambda x : x['content'].apply(token_count))
+        return (doc_table[['chunk_id','doc_name','content','start_token_index','end_token_index'] if with_content else ['chunk_id','doc_name','start_token_index','end_token_index']]
+                .sort_values(
+                 ['doc_name','chunk_id'],ascending=True
+             ).merge(docs_df[['doc_name','doc_token_count']].sort_values(
+                         'doc_name',ascending=True
+                     ).assign(
+                         prev_token_count=lambda x:x['doc_token_count'].shift().fillna(0).cumsum()
+                     ),
+                    on='doc_name')
+               ).assign(kb_start=lambda x : x['start_token_index']+x['prev_token_count']).assign(kb_end=lambda x : x['end_token_index']+x['prev_token_count'])
+
+
+    def update_chat_history(session_id, log_messages):
+        # Load existing chat history from JSON file
+        history_file =  CHATS_PATH + f"/{session_id}.json"
+        try:
+            with open(history_file, 'r') as f:
+                history = json.load(f)
+        except FileNotFoundError:
+            history = []
+
+        # Append new messages to the history
+        history.extend(log_messages)
+
+        # Save updated history back to JSON file
+        with open(history_file, 'w') as f:
+            json.dump(history, f, indent=2)
+
+    def load_json_history():
+        history_file =  CHATS_PATH + f"/{SESSION_ID}.json"
+        try:
+            with open(history_file, 'r') as f:
+                history = json.load(f)
+        except FileNotFoundError:
+            history = []
+        return history
+
+    def on_send_message(x):
+        print('triggered :')
+        print(x)
+        set_messages(load_json_history())
+
+    get_chunks_table, set_docs_df             = mo.state(fetch_chunks_table(True)[[
+        'chunk_id','kb_start','kb_end'
+    ]])
+    get_messages, set_messages           = mo.state([])
+    get_message_index, set_message_index = mo.state(1)
+
+    docs_df = fetch_chunks_table(True).groupby('doc_name')['content'].sum().reset_index().assign(doc_token_count=lambda x : x['content'].apply(token_count))
+    return (
+        docs_df,
+        fetch_chunks_table,
+        get_chunks_table,
+        get_message_index,
+        get_messages,
+        init_table,
+        load_json_history,
+        on_send_message,
+        set_docs_df,
+        set_message_index,
+        set_messages,
+        submit_handler,
+        update_chat_history,
+    )
+
+
+@app.cell
+def __(get_chunks_table):
+    get_chunks_table()
     return
 
 
 @app.cell
 def __():
-    # chat = mo.ui.chat(handler)
-    # chat
     return
+
+
+@app.cell
+def __(get_messages, mo):
+    get_messages
+
+    slider = mo.ui.slider(start=1, stop=max(1,len(get_messages())), label="Select a Message", value=1)
+    return (slider,)
 
 
 @app.cell
 def __():
-    # chat
     return
 
 
 @app.cell
-def __():
-    # chat.value
+def __(get_chunks_table, get_message_index, get_messages, pd):
+    try:
+        chunks_df = (
+            pd.DataFrame(
+            get_messages()[get_message_index()]['chunk_ids'])
+             .astype({'chunk_id':'int'})
+             .merge(get_chunks_table(),
+                    on='chunk_id',
+                    how='left'
+             ))
+    except:
+        chunks_df=pd.DataFrame([])
+    return (chunks_df,)
+
+
+@app.cell
+def __(chunks_df):
+    chunks_df
     return
 
 
 @app.cell
-def __(mo):
-    get_messages, set_messages = mo.state([])
-    return get_messages, set_messages
+def __(fetch_chunks_table):
+    fetch_chunks_table(False)
+    return
+
+
+@app.cell
+def __(alt, chunks_df, docs_df):
+    base = alt.Chart(docs_df.sort_values('doc_name',ascending=False)).encode(
+        order= 'doc_name',
+        x=alt.X('axis_x:N', axis=None, sort=alt.SortField(field='doc_name', order='ascending')),
+        y=alt.Y('doc_token_count:Q', title='Document Length', scale=alt.Scale(reverse=True)),
+        color=alt.Color('doc_name:N', scale=alt.Scale(scheme='category20')),
+        tooltip=[
+            alt.Tooltip('doc_name', title='Document ID'),
+            alt.Tooltip('content:N', title='Text'),
+            alt.Tooltip('doc_token_count:Q', title='Document Length')
+        ]
+    ).properties(
+        width=400,
+        height=400,
+        title="Document Lengths with Highlighted Chunks"
+    )
+    bars = base.mark_bar()
+    chunks = alt.Chart(chunks_df).mark_rect(
+        opacity=0.2,
+        color='green'
+    ).encode(
+        y='kb_start:Q',
+        y2='kb_end:Q',
+        tooltip=[alt.Tooltip('chunk_id:N', title='Chunk ID')]
+    )
+
+    # Combine all layers
+    chart = (bars +  chunks).properties(
+        title="Document Lengths with Highlighted Chunks"
+    )
+    chart
+    return bars, base, chart, chunks
+
+
+@app.cell
+def __(mo, slider):
+    retriever_tab = mo.vstack([
+        mo.hstack([slider, mo.md(f"Chat Message N. : {slider.value}")])
+
+    ])
+    return (retriever_tab,)
+
+
+@app.cell
+def __(mo, retriever_tab):
+    mo.ui.tabs(
+        {
+            "Retriever": retriever_tab,
+            "Chat": mo.md('Chat'),
+        }
+    )
+    return
 
 
 @app.cell
@@ -68,6 +242,7 @@ def __(
     get_message_system,
     logger,
     mo,
+    on_send_message,
     rephrase_user_message,
     retrieve_context,
     time,
@@ -148,57 +323,26 @@ def __(
     chatbot = mo.ui.chat(
         handler,
         prompts=["Hello", "How are you?"],
-        show_configuration_controls=False
+        show_configuration_controls=False,
+        on_message=on_send_message
     )
     chatbot
     return chatbot, handler
 
 
 @app.cell
-def __(chatbot):
-    chatbot.value
+def __(init_table, load_sample_button, mo, reload_table, set_docs_df):
+    mo.stop(not load_sample_button.value)
+
+    init_table()
+
+    set_docs_df(reload_table())
     return
 
 
 @app.cell
-def __(add_doc_to_lance_table, reload_table, set_docs_df):
-    def submit_handler(x):
-        print('loading doc in lance table...')
-        add_doc_to_lance_table(x['doc_name'], x['doc_text'])
-        print('Done')
-        set_docs_df(reload_table())
-    return (submit_handler,)
-
-
-@app.cell
-def __(TABLE_NAME, get_docs, mo):
-    def reload_table():
-        return get_docs(TABLE_NAME).drop('vector',axis=1).rename(columns={'text':'content','file_name':'doc_name','id':'chunk_id'})[['chunk_id','doc_name','content','start_index']]
-    docs_df, set_docs_df = mo.state(reload_table())
-    return docs_df, reload_table, set_docs_df
-
-
-@app.cell
-def __(
-    Path,
-    add_doc_to_lance_table,
-    load_sample_button,
-    mo,
-    reload_table,
-    set_docs_df,
-):
-    mo.stop(not load_sample_button.value)
-    for i in Path('kb\marimo_docs').glob('*.md'):
-        with open(i, 'r', encoding='utf-8') as file:
-            content = file.read()
-        add_doc_to_lance_table(str(i).split('\\')[-1] , content)
-    set_docs_df(reload_table())
-    return content, file, i
-
-
-@app.cell
-def __(docs_df, mo, submit_handler):
-    docs_df
+def __(get_chunks_table, mo, submit_handler):
+    get_chunks_table
     load_sample_button = mo.ui.run_button(label="Load Docs")
     form = (
         mo.md('''
@@ -217,7 +361,9 @@ def __(docs_df, mo, submit_handler):
     mo.vstack([mo.vstack([
     mo.accordion({"⚙️ Add a Document": form}) , mo.md('or load the Marimo Documentation Pages :')
     , load_sample_button]) , 
-    mo.ui.table(docs_df(),show_column_summaries=False,freeze_columns_left=['chunk_id'], label='Vector Table',page_size=25)
+    mo.ui.table(get_chunks_table(),show_column_summaries=False,freeze_columns_left=['chunk_id'], label='Vector Table',page_size=25, format_mapping={
+        'content':lambda x : x.replace('\n', '' )
+    })
 
     ])
     return form, load_sample_button
@@ -268,29 +414,13 @@ def __():
 
 
 @app.cell
-def __(mo, mo_chart):
-    mo.hstack([mo_chart, mo_chart.value])
+def __():
+    # mo.hstack([mo_chart, mo_chart.value])
     return
 
 
 @app.cell
-def __(CHATS_PATH, json):
-    def update_chat_history(session_id, log_messages):
-        # Load existing chat history from JSON file
-        history_file =  CHATS_PATH + f"/{session_id}.json"
-        try:
-            with open(history_file, 'r') as f:
-                history = json.load(f)
-        except FileNotFoundError:
-            history = []
-
-        # Append new messages to the history
-        history.extend(log_messages)
-
-        # Save updated history back to JSON file
-        with open(history_file, 'w') as f:
-            json.dump(history, f, indent=2)
-
+def __():
     def get_message_system():
         return {
                 "role": "system",
@@ -305,7 +435,7 @@ def __(CHATS_PATH, json):
     Responde in a concise complete way, in bullet points or maximun 3/4 sentences.
     """
     }
-    return get_message_system, update_chat_history
+    return (get_message_system,)
 
 
 @app.cell
@@ -316,13 +446,15 @@ def __():
     from pathlib import Path
     import sys
     import os
+    import pandas as pd
 
     import marimo as mo
     from dotenv import load_dotenv
     import uuid
     load_dotenv('.env')
 
-    from core.utils import get_docs
+    from core.utils import get_docs,token_count
+
     from core.embedder import add_doc_to_lance_table
     from core.retriever import retrieve_context, rephrase_user_message
     from groq import Groq
@@ -341,10 +473,12 @@ def __():
         logger,
         mo,
         os,
+        pd,
         rephrase_user_message,
         retrieve_context,
         sys,
         time,
+        token_count,
         uuid,
     )
 

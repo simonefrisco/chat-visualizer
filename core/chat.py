@@ -1,6 +1,6 @@
 
 import os
-
+import json
 
 
 def update_chat_history(session_id, log_messages):
@@ -17,4 +17,5 @@ def update_chat_history(session_id, log_messages):
     # Save updated history back to JSON file
     with open(history_file, 'w') as f:
         json.dump(history, f, indent=2)
-return (update_chat_history,)
+        
+    return (update_chat_history,)

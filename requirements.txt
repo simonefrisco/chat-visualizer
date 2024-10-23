@@ -4,7 +4,7 @@ loguru
 lancedb==0.14.0
 langchain==0.2.14
 langchain-community==0.2.12
-sentence-transformers[onnx]==3.2.0
+fastembed
 groq
 polars==1.8.2
 pandas==2.2.2

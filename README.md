@@ -8,3 +8,5 @@ conda activate tv310
 
 pip install uv
 uv pip install -r requirements.txt
+
+marimo edit

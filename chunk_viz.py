@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.9.12"
+__generated_with = "0.9.1"
 app = marimo.App(width="medium")
 
 
@@ -12,75 +12,9 @@ def __():
 
 @app.cell
 def __():
-    def get_segment_boundaries(chunks):
-        """
-        Break chunks into non-overlapping segments while tracking which chunks cover each segment.
-
-        Args:
-            chunks (list): List of chunk dictionaries with start and end indices
-
-        Returns:
-            list: List of segments with start, end, and associated chunk IDs
-        """
-        # Collect all unique positions where chunks start or end
-        boundaries = set()
-        for chunk in chunks:
-            boundaries.add(chunk['chunkStartIndex'])
-            boundaries.add(chunk['chunkEndIndex'])
-        boundaries = sorted(list(boundaries))
-
-        # Create segments between each pair of consecutive boundaries
-        segments = []
-        for i in range(len(boundaries) - 1):
-            start = boundaries[i]
-            end = boundaries[i + 1]
-            # Find all chunks that cover this segment
-            covering_chunks = []
-            for chunk in chunks:
-                if chunk['chunkStartIndex'] <= start and chunk['chunkEndIndex'] >= end:
-                    covering_chunks.append(chunk['chunkId'])
-            if covering_chunks:  # Only add segment if it's covered by at least one chunk
-                segments.append({
-                    'start': start,
-                    'end': end,
-                    'chunk_ids': covering_chunks
-                })
-
-        return segments
-
-    def get_highlight_style(chunk_ids, highlight_colors):
-        """
-        Generate CSS style for a segment based on which chunks cover it.
-
-        Args:
-            chunk_ids (list): List of chunk IDs covering this segment
-            highlight_colors (dict): Mapping of chunk IDs to colors
-
-        Returns:
-            str: CSS style string
-        """
-        if len(chunk_ids) == 1:
-            # Single chunk - use solid background
-            return f"background-color: {highlight_colors[chunk_ids[0]]};"
-        else:
-            # Multiple chunks - create diagonal stripes
-            colors = [highlight_colors[chunk_id] for chunk_id in chunk_ids]
-            stripe_width = 100 // len(colors)  # Width of each stripe in pixels
-            gradients = []
-            for i, color in enumerate(colors):
-                start = i * stripe_width
-                end = (i + 1) * stripe_width
-                gradients.append(f"{color} {start}px, {color} {end}px")
-
-            return (
-                f"background: repeating-linear-gradient("
-                f"45deg, {', '.join(gradients)});"
-                f"background-size: {len(colors) * stripe_width}px {len(colors) * stripe_width}px;"
-            )
-
     def highlight_document_chunks(doc_name, docs, chunks):
         """
-        Highlight chunks within a document, handling overlapping chunks with different visual styles.
+        Highlight chunks within a document, displaying each chunk as-is with correct boundaries.
 
         Args:
             doc_name (str): Name of the document to process
@@ -92,12 +26,12 @@ def __():
         """
         # Define colors for chunks
         base_colors = {
-            1: "#FFD700",  # Gold
-            2: "#98FB98",  # Pale Green
-            3: "#87CEFA",  # Light Sky Blue
-            4: "#DDA0DD",  # Plum
-            5: "#F08080",  # Light Coral
-            6: "#E0FFFF",  # Light Cyan
+            1: "rgba(255, 215, 0, 0.5)",    # Gold
+            2: "rgba(152, 251, 152, 0.5)",  # Pale Green
+            3: "rgba(135, 206, 250, 0.5)",  # Light Sky Blue
+            4: "rgba(221, 160, 221, 0.5)",  # Plum
+            5: "rgba(240, 128, 128, 0.5)",  # Light Coral
+            6: "rgba(224, 255, 255, 0.5)",  # Light Cyan
         }
 
         # Find the document
@@ -110,40 +44,85 @@ def __():
         if not doc_chunks:
             return f"No chunks found for document '{doc_name}'\n\n{doc['content']}"
 
-        # Get non-overlapping segments with their associated chunks
-        segments = get_segment_boundaries(doc_chunks)
-
         # Build the output HTML
         html = f"<h2>Document: {doc_name}</h2>\n\n<p>"
-        current_pos = 0
         content = doc['content']
 
-        # Process each segment
-        for segment in segments:
-            # Add text before segment
-            html += content[current_pos:segment['start']]
+        # Create a list of all positions with their events (start/end)
+        events = []
+        for chunk in doc_chunks:
+            # Add each boundary as a separate event
+            events.append({
+                'pos': chunk['chunkStartIndex'],
+                'chunk_id': chunk['chunkId'],
+                'type': 'start'
+            })
+            events.append({
+                'pos': chunk['chunkEndIndex'],
+                'chunk_id': chunk['chunkId'],
+                'type': 'end'
+            })
 
-            # Create style for this segment based on covering chunks
-            style = get_highlight_style(segment['chunk_ids'], base_colors)
+        # Sort events by position, handling overlaps
+        # For same positions, process ends before starts to ensure proper nesting
+        events.sort(key=lambda x: (x['pos'], 0 if x['type'] == 'end' else 1))
 
-            # Add the segment text with appropriate styling
-            chunk_labels = ', '.join([str(chunk_id) for chunk_id in segment['chunk_ids']])
-            html += (
-                f'<span style="{style} padding: 2px 4px; border-radius: 4px;" '
-                f'title="Chunks: {chunk_labels}">'
-                f'{content[segment["start"]:segment["end"]]}'
-                f'</span>'
-            )
+        # Process the document
+        current_pos = 0
+        active_chunks = set()  # Keep track of currently active chunks
 
-            current_pos = segment['end']
+        for event in events:
+            # Add text before this position
+            html += content[current_pos:event['pos']]
+
+            if event['type'] == 'start':
+                # Start of a chunk
+                active_chunks.add(event['chunk_id'])
+                color = base_colors[event['chunk_id']]
+                html += (
+                    f'<span style="background-color: {color}; '
+                    f'padding: 1px 0px; border-radius: 1px;" '
+                    f'title="Chunk {event["chunk_id"]}">'
+                )
+            else:
+                # End of a chunk - close all spans up to this chunk and reopen the others
+                chunk_id = event['chunk_id']
+                if chunk_id in active_chunks:
+                    # Close spans for this and all chunks that started after it
+                    chunks_to_reopen = set()
+                    while active_chunks:
+                        current_chunk = max(active_chunks)  # Get most recently started chunk
+                        active_chunks.remove(current_chunk)
+                        html += '</span>'
+                        if current_chunk != chunk_id:
+                            chunks_to_reopen.add(current_chunk)
+                        if current_chunk == chunk_id:
+                            break
+
+                    # Reopen spans for chunks that should continue
+                    for reopen_id in sorted(chunks_to_reopen):
+                        active_chunks.add(reopen_id)
+                        color = base_colors[reopen_id]
+                        html += (
+                            f'<span style="background-color: {color}; '
+                            f'padding: 1px 1px; border-radius: 1px;" '
+                            f'title="Chunk {reopen_id}">'
+                        )
+
+            current_pos = event['pos']
 
         # Add remaining text
         html += content[current_pos:]
+
+        # Close any remaining open spans
+        for _ in active_chunks:
+            html += '</span>'
+
         html += "</p>"
 
         # Add legend
         html += "\n\n<h3>Chunk Legend:</h3>\n"
-        for chunk in doc_chunks:
+        for chunk in sorted(doc_chunks, key=lambda x: x['chunkId']):
             chunk_id = chunk['chunkId']
             color = base_colors[chunk_id]
             html += (
@@ -154,11 +133,7 @@ def __():
             )
 
         return html
-    return (
-        get_highlight_style,
-        get_segment_boundaries,
-        highlight_document_chunks,
-    )
+    return (highlight_document_chunks,)
 
 
 @app.cell
@@ -173,9 +148,9 @@ def __(highlight_document_chunks):
 
     chunks = [
         {"docName": "doc1", "chunkId": 1, "chunkStartIndex": 10, "chunkEndIndex": 30},
-        {"docName": "doc1", "chunkId": 2, "chunkStartIndex": 20, "chunkEndIndex": 40},
-        {"docName": "doc1", "chunkId": 3, "chunkStartIndex": 30, "chunkEndIndex": 60},
-        {"docName": "doc1", "chunkId": 3, "chunkStartIndex": 45, "chunkEndIndex": 70},
+        {"docName": "doc1", "chunkId": 2, "chunkStartIndex": 30, "chunkEndIndex": 50},
+        {"docName": "doc1", "chunkId": 3, "chunkStartIndex": 49, "chunkEndIndex": 70},
+        {"docName": "doc1", "chunkId": 4, "chunkStartIndex": 80, "chunkEndIndex": 95},
     ]
 
     result = highlight_document_chunks("doc1", docs, chunks)
@@ -264,6 +239,12 @@ def __(chunk_overlap, chunk_size, doc_input, splitter_type):
 
 
 @app.cell
+def __(doc_input):
+    doc_input.value
+    return
+
+
+@app.cell
 def __(chunk_size, mo):
     chunk_overlap = mo.ui.number(
         label = "Chunk Overlap",
@@ -301,7 +282,8 @@ def __(
                 splitter_type.value,
                 chunk_size=chunk_size.value,
                 chunk_overlap=chunk_overlap.value,
-                add_start_index = True, strip_whitespace=True
+                add_start_index = True, 
+                strip_whitespace=False
             )
 
             # Split the text
